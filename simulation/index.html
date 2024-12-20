@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=<device-width>, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <form>
+      <input type="number" id="lamda" placeholder="lamda" />
+      <input type="number" id="mue" placeholder="mue" />
+      <input
+        type="number"
+        id="number_of_simulations"
+        placeholder="number of simulations"
+      />
+      <button id="sim">simulate</button>
+      <button onclick="window.location.reload">reset</button>
+      <a href="../calculations/calculations.html">go to calculations</a>
+    </form>
+    <div id="table_of_simulation"></div>
+    <canvas id="myChart" width="400" height="200"></canvas>
+    <script>
+      let Array_of_number_of_coustmers = new Array();
+      let number_of_coustmers = 0;
+      let lamda = parseFloat(document.getElementById("lamda").value);
+      let mue = parseFloat(document.getElementById("mue").value);
+      let number_of_simulations = parseInt(
+        document.getElementById("number_of_simulations").value
+      );
+      let Array_Time_Since_Last_Arrive = new Array();
+      let Array_arrival_time = new Array();
+      let Array_service_time = new Array();
+      let Array_time_service_begins = new Array();
+      let Array_time_service_ends = new Array();
+      let Array_Time_customer_waits_in_the_queue = new Array();
+      let Array_Time_customer_spends_in_the_system = new Array();
+      let Array_Idle_Time_of_server_for_customer = new Array();
+      function getRandomExponential(rate) {
+        return -Math.log(1.0 - Math.random()) / rate;
+      }
+      function fill_Array_Time_Since_Last_Arrive() {
+        for (let i = 0; i < Array_Time_Since_Last_Arrive.length; i++) {
+          if (i == 0) {
+            Array_Time_Since_Last_Arrive[i] = 0;
+          } else {
+            Array_Time_Since_Last_Arrive[i] = getRandomExponential(lamda);
+          }
+        }
+      }
+      function fill_Array_arrival_time() {
+        Array_arrival_time[0] = Array_Time_Since_Last_Arrive[0];
+        for (let i = 1; i < Array_arrival_time.length; i++) {
+          Array_arrival_time[i] =
+            Array_arrival_time[i - 1] + Array_Time_Since_Last_Arrive[i];
+        }
+      }
+      function fill_Array_service_time() {
+        for (let i = 0; i < Array_service_time.length; i++) {
+          Array_service_time[i] = getRandomExponential(mue);
+        }
+      }
+      function fill_Array_time_service_begins() {
+        Array_time_service_begins[0] = Array_arrival_time[0];
+        for (let i = 1; i < Array_time_service_begins.length; i++) {
+          if (Array_arrival_time[i] > Array_time_service_ends[i - 1]) {
+            number_of_coustmers++;
+            Array_of_number_of_coustmers.push(number_of_coustmers);
+          } else {
+            number_of_coustmers--;
+            if (number_of_coustmers >= 0) {
+              Array_of_number_of_coustmers.push(number_of_coustmers);
+            }
+          }
+          Array_time_service_begins[i] = Math.max(
+            Array_arrival_time[i],
+            Array_time_service_ends[i - 1]
+          );
+        }
+      }
+      function fill_Array_time_service_ends() {
+        for (let i = 0; i < Array_time_service_ends.length; i++) {
+          Array_time_service_ends[i] =
+            Array_time_service_begins[i] + Array_service_time[i];
+        }
+      }
+      function fill_Array_Time_customer_waits_in_the_queue() {
+        for (
+          let i = 0;
+          i < Array_Time_customer_waits_in_the_queue.length;
+          i++
+        ) {
+          Array_Time_customer_waits_in_the_queue[i] =
+            Array_time_service_begins[i] - Array_arrival_time[i];
+        }
+      }
+      function fill_Array_Time_customer_spends_in_the_system() {
+        for (
+          let i = 0;
+          i < Array_Time_customer_spends_in_the_system.length;
+          i++
+        ) {
+          Array_Time_customer_spends_in_the_system[i] = Math.max(
+            Array_time_service_ends[i] - Array_arrival_time[i],
+            0
+          );
+        }
+      }
+      function fill_Array_Idle_Time_of_server_for_customer() {
+        Array_Idle_Time_of_server_for_customer[0] =
+          Array_time_service_begins[0];
+        for (
+          let i = 1;
+          i < Array_Idle_Time_of_server_for_customer.length;
+          i++
+        ) {
+          Array_Idle_Time_of_server_for_customer[i] = Math.max(
+            Array_time_service_begins[i] - Array_time_service_ends[i - 1],
+            0
+          );
+        }
+      }
+
+      document
+        .getElementById("sim")
+        .addEventListener("click", function (event) {
+          event.preventDefault();
+          lamda = parseFloat(document.getElementById("lamda").value);
+          mue = parseFloat(document.getElementById("mue").value);
+          number_of_simulations = parseInt(
+            document.getElementById("number_of_simulations").value
+          );
+
+          Array_Time_Since_Last_Arrive = Array(number_of_simulations).fill(0);
+          Array_arrival_time = Array(number_of_simulations).fill(0);
+          Array_service_time = Array(number_of_simulations).fill(0);
+          Array_time_service_begins = Array(number_of_simulations).fill(0);
+          Array_time_service_ends = Array(number_of_simulations).fill(0);
+          Array_Time_customer_waits_in_the_queue = Array(
+            number_of_simulations
+          ).fill(0);
+          Array_Time_customer_spends_in_the_system = Array(
+            number_of_simulations
+          ).fill(0);
+          Array_Idle_Time_of_server_for_customer = Array(
+            number_of_simulations
+          ).fill(0);
+
+          fill_Array_Time_Since_Last_Arrive();
+          fill_Array_arrival_time();
+          fill_Array_service_time();
+          fill_Array_time_service_ends(); // Call this before fill_Array_time_service_begins
+          fill_Array_time_service_begins();
+          fill_Array_Time_customer_waits_in_the_queue();
+          fill_Array_Time_customer_spends_in_the_system();
+          fill_Array_Idle_Time_of_server_for_customer();
+
+          let table =
+            "<table border='1'><tr><th>Customer</th><th>Time Since Last Arrive</th><th>Arrival Time</th><th>Service Time</th><th>Service Begins</th><th>Service Ends</th><th>Wait Time</th><th>Time in System</th><th>Idle Time</th></tr>";
+          for (let i = 0; i < number_of_simulations; i++) {
+            table += `<tr>
+            <td>${i + 1}</td>
+            <td>${Array_Time_Since_Last_Arrive[i].toFixed(2)}</td>
+            <td>${Array_arrival_time[i].toFixed(2)}</td>
+            <td>${Array_service_time[i].toFixed(2)}</td>
+            <td>${Array_time_service_begins[i].toFixed(2)}</td>
+            <td>${Array_time_service_ends[i].toFixed(2)}</td>
+            <td>${Array_Time_customer_waits_in_the_queue[i].toFixed(2)}</td>
+            <td>${Array_Time_customer_spends_in_the_system[i].toFixed(2)}</td>
+            <td>${Array_Idle_Time_of_server_for_customer[i].toFixed(2)}</td>
+          </tr>`;
+          }
+          table += "</table>";
+          document.getElementById("table_of_simulation").innerHTML = table;
+
+          // Create the chart
+          const ctx = document.getElementById("myChart").getContext("2d");
+          const myChart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: Array_time_service_begins.map((time) => time.toFixed(2)),
+              datasets: [
+                {
+                  label: "Number of Customers",
+                  data: Array_of_number_of_coustmers,
+                  stepped: true,
+                  borderColor: "rgba(75, 192, 192, 1)",
+                  borderWidth: 1,
+                  fill: false,
+                },
+              ],
+            },
+            options: {
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: "Time Service Begins",
+                  },
+                },
+                y: {
+                  title: {
+                    display: true,
+                    text: "Number of Customers",
+                  },
+                },
+              },
+            },
+          });
+        });
+    </script>
+  </body>
+</html>
